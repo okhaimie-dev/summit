@@ -610,7 +610,10 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
       } else {
         setAttackInProgress(false);
       }
+      // Re-fetch summit data after attack to reflect new state
+      fetchSummitData();
     } else if (action.type === "attack_until_capture" && captured) {
+      fetchSummitData();
       return false;
     } else if (action.type === "add_extra_life") {
       setTokenBalances((prev: Record<string, number>) => ({

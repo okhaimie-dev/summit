@@ -78,6 +78,14 @@ export const useStarknetApi = () => {
         };
       }
 
+      // Field order matches contract's Beast struct serialization:
+      // PackableBeast: id, prefix, suffix, level, health, shiny, animated
+      // LiveBeastStats: last_death_timestamp, rewards_earned, rewards_claimed, token_id,
+      //   current_health, bonus_health, bonus_xp, attack_streak, revival_count,
+      //   extra_lives, summit_held_seconds
+      // Stats: spirit, luck, specials, wisdom, diplomacy
+      // Quest: captured_summit, used_revival_potion, used_attack_potion, max_attack_streak
+      // Then: taken_at, summit_owner, poison_count, poison_timestamp, specials_hash
       let beast: any = {
         id: parseInt(data?.result[0], 16),
         prefix: parseInt(data?.result[1], 16),
@@ -86,22 +94,22 @@ export const useStarknetApi = () => {
         health: parseInt(data?.result[4], 16),
         shiny: parseInt(data?.result[5], 16),
         animated: parseInt(data?.result[6], 16),
-        token_id: parseInt(data?.result[7], 16),
-        current_health: parseInt(data?.result[8], 16),
-        bonus_health: parseInt(data?.result[9], 16),
-        bonus_xp: parseInt(data?.result[10], 16),
-        attack_streak: parseInt(data?.result[11], 16),
-        last_death_timestamp: parseInt(data?.result[12], 16),
-        revival_count: parseInt(data?.result[13], 16),
-        extra_lives: parseInt(data?.result[14], 16),
-        summit_held_seconds: parseInt(data?.result[15], 16),
-        spirit: parseInt(data?.result[16], 16),
-        luck: parseInt(data?.result[17], 16),
-        specials: Boolean(parseInt(data?.result[18], 16)),
-        wisdom: Boolean(parseInt(data?.result[19], 16)),
-        diplomacy: Boolean(parseInt(data?.result[20], 16)),
-        rewards_earned: parseInt(data?.result[21], 16),
-        rewards_claimed: parseInt(data?.result[22], 16),
+        last_death_timestamp: parseInt(data?.result[7], 16),
+        rewards_earned: parseInt(data?.result[8], 16),
+        rewards_claimed: parseInt(data?.result[9], 16),
+        token_id: parseInt(data?.result[10], 16),
+        current_health: parseInt(data?.result[11], 16),
+        bonus_health: parseInt(data?.result[12], 16),
+        bonus_xp: parseInt(data?.result[13], 16),
+        attack_streak: parseInt(data?.result[14], 16),
+        revival_count: parseInt(data?.result[15], 16),
+        extra_lives: parseInt(data?.result[16], 16),
+        summit_held_seconds: parseInt(data?.result[17], 16),
+        spirit: parseInt(data?.result[18], 16),
+        luck: parseInt(data?.result[19], 16),
+        specials: Boolean(parseInt(data?.result[20], 16)),
+        wisdom: Boolean(parseInt(data?.result[21], 16)),
+        diplomacy: Boolean(parseInt(data?.result[22], 16)),
         captured_summit: Boolean(parseInt(data?.result[23], 16)),
         used_revival_potion: Boolean(parseInt(data?.result[24], 16)),
         used_attack_potion: Boolean(parseInt(data?.result[25], 16)),

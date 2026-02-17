@@ -83,11 +83,22 @@ export const useSystemCalls = () => {
    */
   const executeAction = async (calls: any[], forceResetAction: () => void) => {
     try {
-      let tx = await account!.execute(calls);
+      if (!account) {
+        console.error("No account connected");
+        enqueueSnackbar("Please connect your wallet first", { variant: "error" });
+        forceResetAction();
+        return null;
+      }
+
+      let tx = await account.execute(calls);
       let receipt: any = await waitForTransaction(tx.transaction_hash, 0);
 
       if (receipt.execution_status === "REVERTED") {
         console.log('action failed reverted', receipt);
+        const revertMessage = parseExecutionError(receipt.revert_reason || receipt.execution_error);
+        if (!autopilotEnabled) {
+          enqueueSnackbar(revertMessage, { variant: "error" });
+        }
         forceResetAction();
         return
       }
@@ -115,10 +126,16 @@ export const useSystemCalls = () => {
         .filter(Boolean);
 
       return translatedEvents;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error executing action:", error);
       if (!autopilotEnabled) {
-        enqueueSnackbar(parseExecutionError(error?.data?.execution_error), { variant: "error" });
+        // Try multiple error message sources
+        const errorMessage = parseExecutionError(
+          error?.data?.execution_error
+          || error?.message
+          || (typeof error === 'string' ? error : null)
+        );
+        enqueueSnackbar(errorMessage, { variant: "error" });
       }
       forceResetAction();
       return null;

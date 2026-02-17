@@ -1628,6 +1628,7 @@ export default function indexer(runtimeConfig: ApibaraRuntimeConfig) {
 
               // Collect battles insert
               batches.battles.push({
+                tier: decoded.tier,
                 attacking_beast_token_id: decoded.attacking_beast_token_id,
                 attacking_player,
                 attack_index: decoded.attack_index,
@@ -1657,6 +1658,7 @@ export default function indexer(runtimeConfig: ApibaraRuntimeConfig) {
                 category: "Battle",
                 sub_category: "BattleEvent",
                 data: {
+                  tier: decoded.tier,
                   attacking_beast_token_id: decoded.attacking_beast_token_id,
                   attack_index: decoded.attack_index,
                   defending_beast_token_id: decoded.defending_beast_token_id,

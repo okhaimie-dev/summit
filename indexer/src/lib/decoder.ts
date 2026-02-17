@@ -210,6 +210,7 @@ export interface LiveBeastStatsEventData {
 }
 
 export interface BattleEventData {
+  tier: number;
   attacking_beast_token_id: number;
   attack_index: number;
   defending_beast_token_id: number;
@@ -401,7 +402,7 @@ export function decodeLiveBeastStatsEvent(keys: string[], data: string[]): LiveB
 
 /**
  * Decode BattleEvent
- * Data: attacking_beast_token_id, attack_index, defending_beast_token_id,
+ * Data: tier, attacking_beast_token_id, attack_index, defending_beast_token_id,
  *       attack_count, attack_damage, critical_attack_count, critical_attack_damage,
  *       counter_attack_count, counter_attack_damage,
  *       critical_counter_attack_count, critical_counter_attack_damage,
@@ -409,20 +410,21 @@ export function decodeLiveBeastStatsEvent(keys: string[], data: string[]): LiveB
  */
 export function decodeBattleEvent(keys: string[], data: string[]): BattleEventData {
   return {
-    attacking_beast_token_id: hexToNumber(data[0]),
-    attack_index: hexToNumber(data[1]),
-    defending_beast_token_id: hexToNumber(data[2]),
-    attack_count: hexToNumber(data[3]),
-    attack_damage: hexToNumber(data[4]),
-    critical_attack_count: hexToNumber(data[5]),
-    critical_attack_damage: hexToNumber(data[6]),
-    counter_attack_count: hexToNumber(data[7]),
-    counter_attack_damage: hexToNumber(data[8]),
-    critical_counter_attack_count: hexToNumber(data[9]),
-    critical_counter_attack_damage: hexToNumber(data[10]),
-    attack_potions: hexToNumber(data[11]),
-    revive_potions: hexToNumber(data[12]),
-    xp_gained: hexToNumber(data[13]),
+    tier: hexToNumber(data[0]),
+    attacking_beast_token_id: hexToNumber(data[1]),
+    attack_index: hexToNumber(data[2]),
+    defending_beast_token_id: hexToNumber(data[3]),
+    attack_count: hexToNumber(data[4]),
+    attack_damage: hexToNumber(data[5]),
+    critical_attack_count: hexToNumber(data[6]),
+    critical_attack_damage: hexToNumber(data[7]),
+    counter_attack_count: hexToNumber(data[8]),
+    counter_attack_damage: hexToNumber(data[9]),
+    critical_counter_attack_count: hexToNumber(data[10]),
+    critical_counter_attack_damage: hexToNumber(data[11]),
+    attack_potions: hexToNumber(data[12]),
+    revive_potions: hexToNumber(data[13]),
+    xp_gained: hexToNumber(data[14]),
   };
 }
 

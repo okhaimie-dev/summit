@@ -92,6 +92,7 @@ export const battles = pgTable(
   "battles",
   {
     id: uuid("id").primaryKey().defaultRandom(),
+    tier: smallint("tier").notNull(),
     attacking_beast_token_id: integer("attacking_beast_token_id").notNull(),
     attacking_player: text("attacking_player"), // Owner of attacking beast (joined from beast_owners)
     attack_index: smallint("attack_index").notNull(),
