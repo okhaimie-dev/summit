@@ -13,7 +13,7 @@ export type NotificationType =
   // Beast upgrades
   | 'specials' | 'wisdom' | 'diplomacy' | 'spirit' | 'luck' | 'bonus_health'
   // Rewards
-  | 'survivor_earned' | 'claimed_survivor' | 'claimed_corpses' | 'claimed_skulls'
+  | 'claimed_corpses' | 'claimed_skulls'
   // LS Events
   | 'kill' | 'locked';
 
@@ -36,7 +36,8 @@ export interface GameNotification {
 }
 
 interface GameState {
-  summit: Summit | null;
+  summits: Record<number, Summit | null>;
+  activeTier: number;
   summitEnded: boolean;
   leaderboard: Leaderboard[];
   battleEvents: BattleEvent[];
@@ -65,8 +66,11 @@ interface GameState {
   sortMethod: SortMethod;
   typeFilter: BeastTypeFilter;
   nameMatchFilter: boolean;
+  tierFilter: number | null;
 
   setSummit: (summit: Summit | null | ((prev: Summit | null) => Summit | null)) => void;
+  setSummitForTier: (tier: number, data: Summit | null) => void;
+  setActiveTier: (tier: number) => void;
   setSummitEnded: (summitEnded: boolean) => void;
   setLeaderboard: (leaderboard: Leaderboard[]) => void;
   setBattleEvents: (battleEvents: BattleEvent[]) => void;
@@ -97,12 +101,14 @@ interface GameState {
   setSortMethod: (sortMethod: SortMethod) => void;
   setTypeFilter: (typeFilter: BeastTypeFilter) => void;
   setNameMatchFilter: (nameMatchFilter: boolean) => void;
+  setTierFilter: (tierFilter: number | null) => void;
 
   disconnect: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
-  summit: null,
+  summits: { 1: null, 2: null, 3: null, 4: null, 5: null },
+  activeTier: 1,
   summitEnded: false,
   leaderboard: [],
   battleEvents: [],
@@ -134,6 +140,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   })(),
   typeFilter: 'all',
   nameMatchFilter: false,
+  tierFilter: null,
 
   disconnect: () => {
     set({
@@ -159,12 +166,20 @@ export const useGameStore = create<GameState>((set, get) => ({
       hideDeadBeasts: false,
       typeFilter: 'all',
       nameMatchFilter: false,
+      tierFilter: null,
       autopilotLog: ''
     });
   },
 
-  setSummit: (summit: Summit | null | ((prev: Summit | null) => Summit | null)) =>
-    set(state => ({ summit: typeof summit === 'function' ? summit(state.summit) : summit })),
+  setSummit: (summit: Summit | null | ((prev: Summit | null) => Summit | null)) => {
+    const state = get();
+    const currentSummit = state.summits[state.activeTier];
+    const newSummit = typeof summit === 'function' ? summit(currentSummit) : summit;
+    set({ summits: { ...state.summits, [state.activeTier]: newSummit } });
+  },
+  setSummitForTier: (tier: number, data: Summit | null) =>
+    set(state => ({ summits: { ...state.summits, [tier]: data } })),
+  setActiveTier: (tier: number) => set({ activeTier: tier }),
   setSummitEnded: (summitEnded: boolean) => set({ summitEnded }),
   setLeaderboard: (leaderboard: Leaderboard[]) => set({ leaderboard }),
   setBattleEvents: (battleEvents: BattleEvent[]) => set({ battleEvents }),
@@ -218,4 +233,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
   setTypeFilter: (typeFilter: BeastTypeFilter) => set({ typeFilter }),
   setNameMatchFilter: (nameMatchFilter: boolean) => set({ nameMatchFilter }),
+  setTierFilter: (tierFilter: number | null) => set({ tierFilter }),
 }));
+
+// Computed selector for backward compatibility
+export const useActiveSummit = () => useGameStore(state => state.summits[state.activeTier]);

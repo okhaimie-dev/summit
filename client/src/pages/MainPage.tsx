@@ -24,7 +24,8 @@ import { gameColors } from '../utils/themes'
 
 function MainPage() {
   const { address } = useAccount()
-  const { summit, attackInProgress, selectedBeasts, attackMode } = useGameStore()
+  const { summits, activeTier, attackInProgress, selectedBeasts, attackMode } = useGameStore()
+  const summit = summits[activeTier]
   const { pauseUpdates } = useGameDirector();
   const [questsModalOpen, setQuestsModalOpen] = useState(false);
   const [leaderboardModalOpen, setLeaderboardModalOpen] = useState(false);

@@ -26,13 +26,12 @@ export enum ChainId {
 }
 
 export const TOKEN_ADDRESS = {
-  ATTACK: "0x03e2d0ba6993e2662ba7d14f2faf5f60678fd99651db4f93b3994c71e089ee9f",
-  REVIVE: "0x581959744ccce11c168ce02186e4d9a8221b28a8e8336a5f28b44302aedf2c7",
-  EXTRA_LIFE: "0x6db32714906b760273f33a1f9cfd1a7a3c9a03d9405014f0a9de8dda1f279cb",
-  POISON: "0x802c53c6007540e57390eec9b3dde3c370b54d90fff220bb3fd9e1e0d16c68",
-  SKULL: "0x05c2a56002a95c5c1dd5cc44055bcad05c59778274482cee58b074adeb9dd738",
-  CORPSE: "0x07789e427db2c690c9089e9d11298f99db6eadbb0bcf931a77f9d0c4d13254e2",
-  SURVIVOR: "0x07c7fe4ef54a91f030b668d7de1a5eacaba2bc6f970fdab436d3a29228de830b",
+  ATTACK: "0x054d7e1f1243651039bbba1f03ebe3da91e58bcbee2901b30d1d5df72f5e2a12",
+  REVIVE: "0x02c90c8bfc60cbab2064fcd271039d633c7f30a0544f5727bbb06767d35bd3c0",
+  EXTRA_LIFE: "0x07fdef6a5d5376d346eb1d830ad28aead5bdc1f02e53c7fb4584a17288f4b20d",
+  POISON: "0x07664d9c661c2d794d0d227369821088b21003e8fd9bd8885b39b6a769be4f43",
+  SKULL: "0x0168acb060a52a3acdf8b844afaf8172c0709a1469bee07f251d7ea21b1a436a",
+  CORPSE: "0x0195685bd2bce86e4ebe4ea5ef44d9dc00c4e7c6e362d428abdb618b4739c25c",
 }
 
 export const NETWORKS = {
@@ -192,16 +191,6 @@ export function getNetworkConfig(networkKey: ChainId): NetworkConfig {
             "name": "Feed",
             "description": "Feed beast dead adventurers",
             "entrypoint": "feed"
-          },
-          {
-            "name": "Claim Quest Reward",
-            "description": "Claim quest rewards",
-            "entrypoint": "claim_quest_rewards"
-          },
-          {
-            "name": "Claim Beast Reward",
-            "description": "Claim beast rewards",
-            "entrypoint": "claim_rewards"
           },
           {
             "name": "Add Extra Life",

@@ -3,7 +3,7 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import { Beast, Diplomacy } from '@/types/game';
 import { gameColors } from '@/utils/themes';
 import { addAddressPadding } from 'starknet';
-import { SUMMIT_REWARDS_PER_SECOND } from '@/contexts/GameDirector';
+import { SUMMIT_XP_PER_SECOND } from '@/contexts/GameDirector';
 
 interface DiplomacyPopoverProps {
   anchorEl: HTMLElement | null;
@@ -22,7 +22,7 @@ export function DiplomacyPopover({
   leaderboard,
   addressNames,
 }: DiplomacyPopoverProps) {
-  const rewardPerSecond = SUMMIT_REWARDS_PER_SECOND / 100;
+  const xpPerSecond = SUMMIT_XP_PER_SECOND / 100;
   const totalPower = diplomacy.totalPower - (summitBeast.diplomacy ? summitBeast.power : 0);
 
   return (
@@ -72,9 +72,9 @@ export function DiplomacyPopover({
                 </Box>
                 <Box sx={styles.beastReward}>
                   <Typography sx={styles.rewardValue}>
-                    +{rewardPerSecond.toFixed(6)}
+                    +{xpPerSecond.toFixed(6)}
                   </Typography>
-                  <Typography sx={styles.rewardLabel}>/sec</Typography>
+                  <Typography sx={styles.rewardLabel}>XP/sec</Typography>
                 </Box>
               </Box>
             );

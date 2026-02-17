@@ -1,4 +1,5 @@
 export interface Summit {
+  tier: number;
   beast: Beast;
   block_timestamp: number;
   owner: string;
@@ -123,6 +124,7 @@ export interface GameAction {
 
 // BattleEvent matches Cairo struct - used for transaction event parsing
 export interface BattleEvent {
+  tier: number;
   attacking_beast_token_id: number;
   attack_index: number;
   defending_beast_token_id: number;

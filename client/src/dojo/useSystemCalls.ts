@@ -56,7 +56,8 @@ const parseExecutionError = (error: unknown): string => {
 };
 
 export const useSystemCalls = () => {
-  const { summit, autopilotEnabled } = useGameStore();
+  const { summits, activeTier, autopilotEnabled } = useGameStore();
+  const summit = summits[activeTier];
   const { account } = useAccount();
   const { currentNetworkConfig } = useDynamicConnector();
   const { triggerGasSpent, setTokenBalances } = useController();
@@ -257,22 +258,6 @@ export const useSystemCalls = () => {
     };
   };
 
-  const claimRewards = (beastIds: number[]) => {
-    return {
-      contractAddress: SUMMIT_ADDRESS,
-      entrypoint: "claim_rewards",
-      calldata: CallData.compile([beastIds]),
-    };
-  };
-
-  const claimQuestRewards = (beastIds: number[]) => {
-    return {
-      contractAddress: SUMMIT_ADDRESS,
-      entrypoint: "claim_quest_rewards",
-      calldata: CallData.compile([beastIds]),
-    };
-  };
-
   const claimCorpses = (adventurerIds: number[]) => {
     return {
       contractAddress: currentNetworkConfig.tokens.erc20.find(token => token.name === "CORPSE")?.address,
@@ -320,8 +305,6 @@ export const useSystemCalls = () => {
   return {
     feed,
     attack,
-    claimRewards,
-    claimQuestRewards,
     claimCorpses,
     claimSkulls,
     executeAction,

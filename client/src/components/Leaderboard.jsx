@@ -14,7 +14,8 @@ import RewardsRemainingBar from './RewardsRemainingBar';
 
 function Leaderboard() {
   const { beastsRegistered, beastsAlive, fetchBeastCounts } = useStatistics()
-  const { summit, leaderboard, setLeaderboard } = useGameStore()
+  const { summits, activeTier, leaderboard, setLeaderboard } = useGameStore()
+  const summit = summits[activeTier]
   const { getLeaderboard } = useSummitApi()
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(true)
   const [addressNames, setAddressNames] = useState({})
@@ -89,7 +90,7 @@ function Leaderboard() {
 
     // Calculate rewards from seconds held
     const secondsHeld = Math.max(0, currentTimestamp - summit.block_timestamp)
-    const diplomacyCount = (summit?.diplomacy?.beasts.length || 0) - (summit.beast.diplomacy ? 1 : 0);
+    const diplomacyCount = (summit?.diplomacy?.beasts.length || 0) - (summit?.beast?.diplomacy ? 1 : 0);
     const diplomacyRewardPerSecond = SUMMIT_REWARDS_PER_SECOND / 100;
     const diplomacyRewards = diplomacyRewardPerSecond * secondsHeld * diplomacyCount;
 

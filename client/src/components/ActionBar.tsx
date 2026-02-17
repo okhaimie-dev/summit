@@ -39,11 +39,12 @@ function ActionBar() {
   const extraLifeBalance = Number((tokenBalances as any)?.['EXTRA LIFE'] ?? 0) || 0;
   const poisonBalance = Number((tokenBalances as any)?.['POISON'] ?? 0) || 0;
 
-  const { selectedBeasts, summit,
+  const { selectedBeasts, summits, activeTier,
     attackInProgress,
     applyingPotions, setApplyingPotions, appliedPoisonCount, setAppliedPoisonCount, setBattleEvents, setAttackInProgress,
     collection, collectionSyncing, setSelectedBeasts, attackMode, setAttackMode, autopilotLog, setAutopilotLog,
     autopilotEnabled, setAutopilotEnabled, appliedExtraLifePotions, setAppliedExtraLifePotions } = useGameStore();
+  const summit = summits[activeTier];
   const {
     attackStrategy,
     extraLifeStrategy,
@@ -117,7 +118,7 @@ function ActionBar() {
   }
 
   const collectionWithCombat = useMemo<Beast[]>(() => {
-    if (summit && collection.length > 0) {
+    if (summit && summit.beast?.token_id > 0 && collection.length > 0) {
       let revivePotionsEnabled = autopilotEnabled && useRevivePotions && revivePotionsUsed < revivePotionMax;
       let attackPotionsEnabled = autopilotEnabled && useAttackPotions && attackPotionsUsed < attackPotionMax;
 

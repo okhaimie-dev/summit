@@ -30,12 +30,14 @@ import BeastProfile from './BeastProfile';
 function BeastCollection() {
   const {
     loadingCollection, collection, selectedBeasts, setSelectedBeasts,
-    attackInProgress, summit, attackMode,
+    attackInProgress, summits, activeTier, attackMode,
     hideDeadBeasts, setHideDeadBeasts,
     sortMethod, setSortMethod,
     typeFilter, setTypeFilter,
     nameMatchFilter, setNameMatchFilter,
+    tierFilter, setTierFilter,
   } = useGameStore()
+  const summit = summits[activeTier]
   const { tokenBalances } = useController()
   const { address } = useAccount()
   const { notifyTargetClicked, isStepTarget } = useQuestGuide()
@@ -72,21 +74,29 @@ function BeastCollection() {
   // useMemo prevents recalculation when filters/sorting change
   const collectionWithCombat = useMemo(() => {
     if (summit && collection.length > 0) {
+      const hasSummitBeast = summit.beast?.token_id > 0;
       let filtered = collection.map((beast: Beast) => {
         let newBeast = { ...beast }
         newBeast.revival_time = getBeastRevivalTime(newBeast);
         newBeast.current_health = getBeastCurrentHealth(newBeast)
-        newBeast.combat = calculateBattleResult(newBeast, summit, 0)
+        if (hasSummitBeast) {
+          newBeast.combat = calculateBattleResult(newBeast, summit, 0)
+        }
         return newBeast
       });
 
+      // Apply tier filter
+      if (tierFilter !== null) {
+        filtered = filtered.filter(beast => beast.tier === tierFilter);
+      }
+
       // Apply type filter
-      if (typeFilter === 'strong') {
+      if (typeFilter === 'strong' && hasSummitBeast) {
         filtered = filtered.filter(beast => isStrongAgainst(beast.type, summit.beast.type));
       }
 
       // Apply name match filter
-      if (nameMatchFilter) {
+      if (nameMatchFilter && hasSummitBeast) {
         filtered = filtered.filter(beast =>
           beast.prefix === summit.beast.prefix || beast.suffix === summit.beast.suffix
         );
@@ -100,16 +110,16 @@ function BeastCollection() {
       // Sort the filtered collection
       return filtered.sort((a: Beast, b: Beast) => {
         // Always keep summit beast at the top
-        if (a.token_id === summit.beast.token_id) {
+        if (hasSummitBeast && a.token_id === summit.beast.token_id) {
           return -1
-        } else if (b.token_id === summit.beast.token_id) {
+        } else if (hasSummitBeast && b.token_id === summit.beast.token_id) {
           return 1
         }
 
         // Apply selected sorting method
         if (sortMethod === 'recommended') {
           // When nameMatchFilter is active, prioritize beasts that match both prefix & suffix
-          if (nameMatchFilter) {
+          if (nameMatchFilter && hasSummitBeast) {
             const aMatchesBoth = a.prefix === summit.beast.prefix && a.suffix === summit.beast.suffix;
             const bMatchesBoth = b.prefix === summit.beast.prefix && b.suffix === summit.beast.suffix;
             
@@ -152,7 +162,7 @@ function BeastCollection() {
     }
 
     return collection.sort((a, b) => b.power - a.power)
-  }, [collection, summit, sortMethod, typeFilter, nameMatchFilter, hideDeadBeasts]);
+  }, [collection, summit, sortMethod, typeFilter, nameMatchFilter, hideDeadBeasts, tierFilter]);
 
   const selectBeast = useCallback((beast: Beast, isFirstBeast: boolean = false) => {
     if (attackInProgress || attackMode === 'autopilot') return;
@@ -468,6 +478,28 @@ function BeastCollection() {
                       </Box>
                     </Box>
 
+                    {/* Tier Filter */}
+                    <Box mb={0.5}>
+                      <Typography sx={styles.filterHeadline}>TIER</Typography>
+                      <Box sx={styles.filterButtons}>
+                        <Box
+                          sx={[styles.filterButton, tierFilter === null && styles.filterButtonActive]}
+                          onClick={() => setTierFilter(null)}
+                        >
+                          <Typography sx={styles.filterButtonText}>All</Typography>
+                        </Box>
+                        {[1, 2, 3, 4, 5].map((tier) => (
+                          <Box
+                            key={tier}
+                            sx={[styles.filterButton, tierFilter === tier && styles.filterButtonActive]}
+                            onClick={() => setTierFilter(tier)}
+                          >
+                            <Typography sx={styles.filterButtonText}>T{tier}</Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    </Box>
+
                     {/* Filters Section */}
                     <Box>
                       <Typography sx={styles.filterHeadline}>FILTER</Typography>
@@ -516,7 +548,7 @@ function BeastCollection() {
                 {virtualizer.getVirtualItems().map((virtualItem) => {
                   const beast = collectionWithCombat[virtualItem.index];
                   const isSelected = selectedBeasts.some(b => b[0].token_id === beast.token_id);
-                  const isSavage = summit?.beast.token_id === beast.token_id;
+                  const isSavage = summit?.beast?.token_id === beast.token_id;
                   const isDead = beast.current_health === 0;
                   const isLocked = isBeastLocked(beast);
                   const selectionIndex = selectedBeasts.findIndex(b => b[0].token_id === beast.token_id) + 1;
@@ -547,7 +579,7 @@ function BeastCollection() {
                           isLocked={isLocked}
                           combat={combat}
                           selectionIndex={selectionIndex}
-                          summitHealth={summit?.beast.current_health || 0}
+                          summitHealth={summit?.beast?.current_health || 0}
                           attackMode={attackMode}
                           onClick={() => selectBeast(beast, isFirstBeast)}
                           onMouseEnter={(e) => handleHoverEnter(e, beast)}

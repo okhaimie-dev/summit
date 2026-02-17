@@ -19,7 +19,8 @@ interface BeastProfileProps {
 }
 
 export default function BeastProfile({ beast }: BeastProfileProps) {
-  const { summit } = useGameStore()
+  const { summits, activeTier } = useGameStore()
+  const summit = summits[activeTier]
   const originalExperience = Math.pow(beast.level, 2);
   const currentExperience = originalExperience + beast.bonus_xp;
   const nextLevelExperience = Math.pow(beast.current_level + 1, 2);
@@ -116,7 +117,7 @@ export default function BeastProfile({ beast }: BeastProfileProps) {
               <Typography sx={styles.pixelStreakTitle}>ATTACK STREAK</Typography>
               {attackStreak > 0 && !streakEnded && (
                 <Typography sx={styles.pixelStreakTimer}>
-                  {beast.token_id === summit.beast.token_id ? "PAUSED" : `ENDS IN ${timeLeft}`}
+                  {beast.token_id === summit?.beast?.token_id ? "PAUSED" : `ENDS IN ${timeLeft}`}
                 </Typography>
               )}
             </Box>

@@ -73,7 +73,8 @@ const transformAllBeast = (ab: AllBeast): Beast => {
 
 export default function BeastDexModal(props: BeastDexModalProps) {
   const { open, close, filterTokenIds } = props;
-  const { collection, summit } = useGameStore();
+  const { collection, summits, activeTier } = useGameStore();
+  const summit = summits[activeTier];
   const { address } = useAccount();
   const summitApi = useSummitApi();
 

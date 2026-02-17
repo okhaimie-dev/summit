@@ -21,9 +21,12 @@ import { calculateBattleResult, fetchBeastImage, fetchBeastSound, fetchBeastSumm
 import { gameColors } from '../utils/themes';
 import { isMobile } from 'react-device-detect';
 
+const TIER_LABELS = ['T1', 'T2', 'T3', 'T4', 'T5'];
+
 function Summit() {
-  const { collection, summit, attackInProgress, selectedBeasts, spectatorBattleEvents,
-    poisonEvent, setSpectatorBattleEvents, setSummit, setPoisonEvent } = useGameStore()
+  const { collection, summits, activeTier, setActiveTier, attackInProgress, selectedBeasts, spectatorBattleEvents,
+    poisonEvent, setSpectatorBattleEvents, setSummit, setPoisonEvent, setTierFilter } = useGameStore()
+  const summit = summits[activeTier]
   const { pauseUpdates } = useGameDirector()
   const { play } = useSound()
 
@@ -39,9 +42,11 @@ function Summit() {
   const processingSpectatorRef = useRef<boolean>(false)
   const spectatorAnimSeqRef = useRef<number>(0)
 
-  const originalExperience = Math.pow(summit.beast.level, 2);
-  const currentExperience = originalExperience + summit.beast.bonus_xp;
-  const nextLevelExperience = Math.pow(summit.beast.current_level + 1, 2);
+  const isEmpty = !summit || !summit.beast?.token_id;
+
+  const originalExperience = isEmpty ? 0 : Math.pow(summit.beast.level, 2);
+  const currentExperience = isEmpty ? 0 : originalExperience + summit.beast.bonus_xp;
+  const nextLevelExperience = isEmpty ? 1 : Math.pow(summit.beast.current_level + 1, 2);
 
   const strike = useLottie({
     animationData: strikeAnim,
@@ -158,17 +163,17 @@ function Summit() {
     }
   }, [selectedBeasts, summit])
 
-  const summitMaxHealth = summit.beast.health + summit.beast.bonus_health;
-  const summitTotalPoolBefore =
+  const summitMaxHealth = isEmpty ? 0 : summit.beast.health + summit.beast.bonus_health;
+  const summitTotalPoolBefore = isEmpty ? 0 :
     (summit.beast.extra_lives || 0) * summitMaxHealth + summit.beast.current_health;
   const summitTotalPoolAfter = summitTotalPoolBefore - estimatedDamage;
   const expectedTakeSummit = estimatedDamage > 0 && summitTotalPoolAfter <= 0;
   const expectedExtraLivesAfter = expectedTakeSummit
     ? 0
-    : Math.floor((summitTotalPoolAfter - 1) / summitMaxHealth);
+    : Math.floor((summitTotalPoolAfter - 1) / (summitMaxHealth || 1));
   const expectedExtraLivesLost = expectedTakeSummit
-    ? (summit.beast.extra_lives || 0)
-    : Math.max(0, (summit.beast.extra_lives || 0) - expectedExtraLivesAfter);
+    ? (isEmpty ? 0 : (summit.beast.extra_lives || 0))
+    : Math.max(0, (isEmpty ? 0 : (summit.beast.extra_lives || 0)) - expectedExtraLivesAfter);
 
   const processSpectatorQueue = async () => {
     if (processingSpectatorRef.current) return;
@@ -260,14 +265,46 @@ function Summit() {
     setSpectatorDamage([]);
   }, [summit?.beast.token_id, pauseUpdates]);
 
-  const isSavage = Boolean(collection.find(beast => beast.token_id === summit.beast.token_id))
-  const showAttack = !isSavage && !attackInProgress && selectedBeasts.length > 0
-  const name = summit.beast.prefix ? `"${summit.beast.prefix} ${summit.beast.suffix}" ${summit.beast.name}` : summit.beast.name
+  const isSavage = !isEmpty && Boolean(collection.find(beast => beast.token_id === summit.beast.token_id))
+  const showAttack = !isEmpty && !isSavage && !attackInProgress && selectedBeasts.length > 0
+  const name = isEmpty ? '' : (summit.beast.prefix ? `"${summit.beast.prefix} ${summit.beast.suffix}" ${summit.beast.name}` : summit.beast.name)
+
+  const handleTierClick = (tier: number) => {
+    setActiveTier(tier);
+    setTierFilter(tier);
+  };
 
   return (
     <Box sx={styles.summitContainer}>
+      {/* Tier Selector */}
+      <Box sx={styles.tierSelector}>
+        {TIER_LABELS.map((label, i) => {
+          const tier = i + 1;
+          const tierSummit = summits[tier];
+          const tierEmpty = !tierSummit?.beast?.token_id;
+          return (
+            <Box
+              key={tier}
+              sx={[styles.tierButton, activeTier === tier && styles.tierButtonActive]}
+              onClick={() => handleTierClick(tier)}
+            >
+              <Typography sx={styles.tierButtonText}>{label}</Typography>
+              {tierEmpty && <Typography sx={styles.emptyBadge}>Empty</Typography>}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {/* Empty Summit State */}
+      {isEmpty && (
+        <Box sx={styles.emptySummitContainer}>
+          <Typography sx={styles.emptySummitTitle}>No beast holds this summit</Typography>
+          <Typography sx={styles.emptySummitSubtitle}>Send a beast to claim Tier {activeTier}</Typography>
+        </Box>
+      )}
+
       {/* Stats and Health Section */}
-      <Box sx={styles.statsSection}>
+      {!isEmpty && <><Box sx={styles.statsSection}>
         {/* Name and Owner */}
         <Box sx={styles.nameSection}>
           <Box sx={styles.nameRow}>
@@ -656,7 +693,10 @@ function Summit() {
         })}
       </AnimatePresence>
 
-      {summit && (
+      {/* Close !isEmpty conditional */}
+      </>}
+
+      {!isEmpty && summit && (
         <SummitGiftModal
           open={giftModalOpen}
           close={() => setGiftModalOpen(false)}
@@ -681,6 +721,66 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+  },
+  tierSelector: {
+    display: 'flex',
+    gap: '6px',
+    marginBottom: '8px',
+    zIndex: 10,
+  },
+  tierButton: {
+    padding: '4px 12px',
+    borderRadius: '6px',
+    background: `${gameColors.darkGreen}80`,
+    border: `1px solid ${gameColors.accentGreen}40`,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '2px',
+    '&:hover': {
+      border: `1px solid ${gameColors.accentGreen}80`,
+      background: `${gameColors.mediumGreen}80`,
+    },
+  },
+  tierButtonActive: {
+    background: `linear-gradient(135deg, ${gameColors.lightGreen} 0%, ${gameColors.mediumGreen} 100%)`,
+    border: `1px solid ${gameColors.brightGreen}80`,
+    boxShadow: `0 0 8px ${gameColors.brightGreen}40`,
+  },
+  tierButtonText: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#ffedbb',
+    letterSpacing: '0.5px',
+  },
+  emptyBadge: {
+    fontSize: '8px',
+    color: gameColors.accentGreen,
+    letterSpacing: '0.3px',
+    lineHeight: '1',
+  },
+  emptySummitContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    flex: 1,
+  },
+  emptySummitTitle: {
+    fontSize: '18px',
+    fontWeight: 'bold',
+    color: '#ffedbb',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    textShadow: '0 2px 4px rgba(0, 0, 0, 0.8)',
+  },
+  emptySummitSubtitle: {
+    fontSize: '14px',
+    color: gameColors.accentGreen,
+    letterSpacing: '0.5px',
   },
   nameSection: {
     textAlign: 'center',

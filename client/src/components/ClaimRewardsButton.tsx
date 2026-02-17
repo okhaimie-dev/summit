@@ -8,73 +8,17 @@ import { Beast } from '@/types/game';
 import { gameColors } from '@/utils/themes';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import { Badge, Box, Button, Divider, IconButton, Menu, MenuItem, Tooltip, Typography } from '@mui/material';
-import { useEffect, useMemo, useRef, useState } from 'react';
 
-const survivorTokenIcon = '/images/survivor_token.png';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const SKULL_LIMIT = 250;
 const CORPSE_LIMIT = 250;
-const QUEST_REWARD_LIMIT = 900;
-const SUMMIT_REWARD_LIMIT = 295;
 
 interface ClaimState {
   inProgress: boolean;
   claimed: number;
   total: number;
 }
-
-// Calculate quest rewards for a beast - matches contract logic exactly
-// Returns reward amount in integer units (divide by 100 for display)
-const calculateQuestRewards = (beast: Beast): number => {
-  let totalRewards = 0;
-
-  // First Blood - attacked the summit (bonus_xp > 0)
-  if (beast.bonus_xp > 0) {
-    totalRewards += 5;
-  }
-
-  // Second Wind - used revival potion
-  if (beast.used_revival_potion) {
-    totalRewards += 10;
-  }
-
-  // A Vital Boost - used attack potion
-  if (beast.used_attack_potion) {
-    totalRewards += 10;
-  }
-
-  // Level up bonuses (cumulative - expressed as running totals)
-  const bonusLevels = beast.current_level - beast.level;
-  if (bonusLevels >= 10) {
-    totalRewards += 30; // 2+3+4+6
-  } else if (bonusLevels >= 5) {
-    totalRewards += 18;  // 2+3+4
-  } else if (bonusLevels >= 3) {
-    totalRewards += 10;  // 2+3
-  } else if (bonusLevels >= 1) {
-    totalRewards += 4;
-  }
-
-  // Summit Conqueror - captured the summit
-  if (beast.captured_summit) {
-    totalRewards += 10;
-  }
-
-  // Iron Grip - held summit for 10+ seconds
-  if (beast.summit_held_seconds >= 10) {
-    totalRewards += 20;
-  }
-
-  // Consistency is Key - reached max attack streak
-  if (beast.max_attack_streak) {
-    totalRewards += 10;
-  }
-
-  return totalRewards;
-};
-
-// Max possible reward per beast (in integer units)
-const MAX_REWARD_PER_BEAST = 95;
 
 const ClaimRewardsButton = () => {
   const { collection, setCollection, adventurerCollection, setAdventurerCollection } = useGameStore();
@@ -84,19 +28,11 @@ const ClaimRewardsButton = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [skullClaimState, setSkullClaimState] = useState<ClaimState | null>(null);
   const [corpseClaimState, setCorpseClaimState] = useState<ClaimState | null>(null);
-  const [survivorClaimState, setSurvivorClaimState] = useState<ClaimState | null>(null);
-  const [summitClaimState, setSummitClaimState] = useState<ClaimState | null>(null);
 
   // Calculate all unclaimed rewards in a single pass through collection
   const claimableRewards = useMemo(() => {
     const skullBeasts: Beast[] = [];
-    const questBeasts: Beast[] = [];
-    const summitBeasts: Beast[] = [];
-
     let skullTokens = 0;
-    let questTotalEarned = 0;
-    let questTotalClaimed = 0;
-    let summitTokens = 0;
 
     collection.forEach((beast: Beast) => {
       // Skull rewards (adventurers killed)
@@ -105,46 +41,17 @@ const ClaimRewardsButton = () => {
         skullBeasts.push(beast);
         skullTokens += skullUnclaimed;
       }
-
-      // Quest rewards (SURVIVOR from quests)
-      const questEarned = calculateQuestRewards(beast);
-      const questClaimed = beast.quest_rewards_claimed || 0;
-      questTotalEarned += questEarned;
-      questTotalClaimed += questClaimed;
-      if (questEarned > questClaimed) {
-        questBeasts.push(beast);
-      }
-
-      // Summit rewards (SURVIVOR from holding summit)
-      const summitUnclaimed = beast.rewards_earned - beast.rewards_claimed;
-      if (summitUnclaimed > 0) {
-        summitBeasts.push(beast);
-        summitTokens += summitUnclaimed;
-      }
     });
 
     return {
-      // Skull
       unclaimedSkullBeasts: skullBeasts,
       unclaimedSkullTokens: skullTokens,
-      // Quest (SURVIVOR)
-      unclaimedSurvivorBeasts: questBeasts,
-      unclaimedSurvivorTokens: (questTotalEarned - questTotalClaimed) / 100,
-      questTotalEarned,
-      questTotalPossible: collection.length * MAX_REWARD_PER_BEAST,
-      // Summit (SURVIVOR)
-      unclaimedSummitBeasts: summitBeasts,
-      unclaimedSummitTokens: summitTokens / 100000,
     };
   }, [collection]);
 
   const {
     unclaimedSkullBeasts,
     unclaimedSkullTokens,
-    unclaimedSurvivorBeasts,
-    unclaimedSurvivorTokens,
-    unclaimedSummitBeasts,
-    unclaimedSummitTokens,
   } = claimableRewards;
 
   // Corpse tokens are from adventurer collection (separate)
@@ -153,7 +60,7 @@ const ClaimRewardsButton = () => {
     [adventurerCollection],
   );
 
-  const totalRewards = (unclaimedSkullTokens > 0 ? 1 : 0) + (unclaimedCorpseTokens > 0 ? 1 : 0) + (unclaimedSurvivorTokens > 0 ? 1 : 0) + (unclaimedSummitTokens > 0 ? 1 : 0);
+  const totalRewards = (unclaimedSkullTokens > 0 ? 1 : 0) + (unclaimedCorpseTokens > 0 ? 1 : 0);
 
   // Badge bounce when reward count changes, glow pulse with auto-expire
   const prevTotalRewards = useRef(totalRewards);
@@ -176,8 +83,6 @@ const ClaimRewardsButton = () => {
     if (actionFailed) {
       setSkullClaimState(null);
       setCorpseClaimState(null);
-      setSurvivorClaimState(null);
-      setSummitClaimState(null);
     }
   }, [actionFailed]);
 
@@ -300,140 +205,14 @@ const ClaimRewardsButton = () => {
     }
   };
 
-  const claimSurvivor = async () => {
-    if (unclaimedSurvivorBeasts.length === 0) return;
-
-    const totalTokens = unclaimedSurvivorTokens;
-    const beastIds = unclaimedSurvivorBeasts.map(beast => beast.token_id);
-
-    setSurvivorClaimState({ inProgress: true, claimed: 0, total: totalTokens });
-
-    try {
-      let allSucceeded = true;
-      let claimedSoFar = 0;
-
-      for (let i = 0; i < beastIds.length; i += QUEST_REWARD_LIMIT) {
-        const batch = beastIds.slice(i, i + QUEST_REWARD_LIMIT);
-        const batchTokens = unclaimedSurvivorBeasts
-          .slice(i, i + QUEST_REWARD_LIMIT)
-          .reduce((sum: number, beast: Beast) => {
-            const earned = calculateQuestRewards(beast);
-            const claimed = beast.quest_rewards_claimed || 0;
-            return sum + (earned - claimed);
-          }, 0) / 100; // Convert to display units
-
-        const res = await executeGameAction({
-          type: 'claim_quest_reward',
-          beastIds: batch,
-        });
-
-        if (!res) {
-          allSucceeded = false;
-          break;
-        }
-
-        claimedSoFar += batchTokens;
-        setSurvivorClaimState({ inProgress: true, claimed: claimedSoFar, total: totalTokens });
-      }
-
-      if (allSucceeded) {
-        // Update local token balances using functional update to avoid stale closure
-        setTokenBalances((prev: Record<string, number>) => ({
-          ...prev,
-          SURVIVOR: (prev['SURVIVOR'] || 0) + totalTokens,
-        }));
-
-        // Optimistically mark quest rewards as claimed for these beasts
-        setCollection(prevCollection =>
-          prevCollection.map((beast: Beast) => {
-            const earned = calculateQuestRewards(beast);
-            const claimed = beast.quest_rewards_claimed || 0;
-            if (earned > claimed) {
-              return {
-                ...beast,
-                quest_rewards_claimed: earned,
-              };
-            }
-            return beast;
-          }),
-        );
-      }
-      setSurvivorClaimState(null);
-    } catch (ex) {
-      console.error("Error claiming survivor:", ex);
-      setSurvivorClaimState(null);
-    }
-  };
-
-  const claimSummitRewards = async () => {
-    if (unclaimedSummitBeasts.length === 0) return;
-
-    const totalTokens = unclaimedSummitTokens;
-    const beastIds = unclaimedSummitBeasts.map(beast => beast.token_id);
-
-    setSummitClaimState({ inProgress: true, claimed: 0, total: totalTokens });
-
-    try {
-      let allSucceeded = true;
-      let claimedSoFar = 0;
-
-      for (let i = 0; i < beastIds.length; i += SUMMIT_REWARD_LIMIT) {
-        const batch = beastIds.slice(i, i + SUMMIT_REWARD_LIMIT);
-        const batchTokens = unclaimedSummitBeasts
-          .slice(i, i + SUMMIT_REWARD_LIMIT)
-          .reduce((sum: number, beast: Beast) => sum + (beast.rewards_earned - beast.rewards_claimed), 0);
-
-        const res = await executeGameAction({
-          type: 'claim_summit_reward',
-          beastIds: batch,
-        });
-
-        if (!res) {
-          allSucceeded = false;
-          break;
-        }
-
-        claimedSoFar += batchTokens;
-        setSummitClaimState({ inProgress: true, claimed: claimedSoFar, total: totalTokens });
-      }
-
-      if (allSucceeded) {
-        // Update local token balances using functional update to avoid stale closure
-        setTokenBalances((prev: Record<string, number>) => ({
-          ...prev,
-          SURVIVOR: (prev['SURVIVOR'] || 0) + totalTokens,
-        }));
-
-        // Optimistically mark summit rewards as claimed for these beasts
-        setCollection(prevCollection =>
-          prevCollection.map((beast: Beast) => {
-            if (beast.rewards_earned > beast.rewards_claimed) {
-              return {
-                ...beast,
-                rewards_claimed: beast.rewards_earned,
-              };
-            }
-            return beast;
-          }),
-        );
-      }
-      setSummitClaimState(null);
-    } catch (ex) {
-      console.error("Error claiming summit rewards:", ex);
-      setSummitClaimState(null);
-    }
-  };
-
-  if (totalRewards === 0 && !skullClaimState && !corpseClaimState && !survivorClaimState && !summitClaimState) {
+  if (totalRewards === 0 && !skullClaimState && !corpseClaimState) {
     return null;
   }
 
   const showSkulls = unclaimedSkullTokens > 0 || skullClaimState;
   const showCorpse = unclaimedCorpseTokens > 0 || corpseClaimState;
-  const showSurvivor = unclaimedSurvivorTokens > 0 || survivorClaimState;
-  const showSummit = unclaimedSummitTokens > 0 || summitClaimState;
 
-  const isAnyClaiming = skullClaimState?.inProgress || corpseClaimState?.inProgress || survivorClaimState?.inProgress || summitClaimState?.inProgress;
+  const isAnyClaiming = skullClaimState?.inProgress || corpseClaimState?.inProgress;
 
   return (
     <>
@@ -569,97 +348,6 @@ const ClaimRewardsButton = () => {
           </MenuItem>
         )}
 
-        {(showSkulls || showCorpse) && showSurvivor && (
-          <Divider sx={styles.divider} />
-        )}
-
-        {showSurvivor && (
-          <MenuItem sx={styles.survivorMenuItem} disableRipple>
-            <Box sx={styles.survivorContent}>
-              <Box sx={styles.survivorHeader}>
-                <Box sx={styles.iconContainer}>
-                  <img src={survivorTokenIcon} alt="survivor" style={styles.tokenIcon} />
-                </Box>
-                <Box sx={styles.menuItemInfo}>
-                  <Box sx={styles.titleRow}>
-                    <Typography sx={styles.survivorTitle}>Quest Reward</Typography>
-                    <Tooltip
-                      title="Earned by completing quests with your beasts. Each quest completed earns SURVIVOR tokens"
-                      placement="top"
-                      arrow
-                      slotProps={{ tooltip: { sx: styles.tooltip } }}
-                    >
-                      <HelpOutlineIcon sx={styles.helpIcon} />
-                    </Tooltip>
-                  </Box>
-                  <Typography sx={styles.survivorSubtitle}>
-                    {survivorClaimState
-                      ? `${survivorClaimState.claimed.toFixed(2)}/${survivorClaimState.total.toFixed(2)} claimed`
-                      : `${unclaimedSurvivorTokens.toFixed(2)} available`}
-                  </Typography>
-                </Box>
-                <Button
-                  sx={styles.claimButton}
-                  onClick={claimSurvivor}
-                  disabled={isAnyClaiming || unclaimedSurvivorTokens <= 0}
-                >
-                  {survivorClaimState?.inProgress ? (
-                    <Box display="flex" alignItems="baseline" sx={{ color: 'white' }}>
-                      <div className="dotLoader white" />
-                    </Box>
-                  ) : (
-                    <Typography sx={styles.claimButtonText}>CLAIM</Typography>
-                  )}
-                </Button>
-              </Box>
-            </Box>
-          </MenuItem>
-        )}
-
-        {(showSkulls || showCorpse || showSurvivor) && showSummit && (
-          <Divider sx={styles.divider} />
-        )}
-
-        {showSummit && (
-          <MenuItem sx={styles.menuItem} disableRipple>
-            <Box sx={styles.menuItemContent}>
-              <Box sx={styles.iconContainer}>
-                <img src={survivorTokenIcon} alt="survivor" style={styles.tokenIcon} />
-              </Box>
-              <Box sx={styles.menuItemInfo}>
-                <Box sx={styles.titleRow}>
-                  <Typography sx={styles.summitTitle}>Summit Reward</Typography>
-                  <Tooltip
-                    title="Earned by holding the Summit. The longer you hold, the more rewards you earn"
-                    placement="top"
-                    arrow
-                    slotProps={{ tooltip: { sx: styles.tooltip } }}
-                  >
-                    <HelpOutlineIcon sx={styles.helpIcon} />
-                  </Tooltip>
-                </Box>
-                <Typography sx={styles.summitSubtitle}>
-                  {summitClaimState
-                    ? `${summitClaimState.claimed}/${summitClaimState.total} claimed`
-                    : `${unclaimedSummitTokens.toFixed(2)} available`}
-                </Typography>
-              </Box>
-              <Button
-                sx={styles.claimButton}
-                onClick={claimSummitRewards}
-                disabled={isAnyClaiming || unclaimedSummitBeasts.length === 0}
-              >
-                {summitClaimState?.inProgress ? (
-                  <Box display="flex" alignItems="baseline">
-                    <div className="dotLoader white" />
-                  </Box>
-                ) : (
-                  <Typography sx={styles.claimButtonText}>CLAIM</Typography>
-                )}
-              </Button>
-            </Box>
-          </MenuItem>
-        )}
       </Menu>
     </>
   );

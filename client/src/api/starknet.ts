@@ -34,7 +34,7 @@ export const useStarknetApi = () => {
     return parseBalances(data || [], tokens);
   }
 
-  const getSummitData = async (): Promise<Summit> => {
+  const getSummitData = async (tier: number = 1): Promise<Summit | null> => {
     try {
       const response = await fetch(currentNetworkConfig.rpcUrl, {
         method: "POST",
@@ -48,7 +48,7 @@ export const useStarknetApi = () => {
             {
               contract_address: import.meta.env.VITE_PUBLIC_SUMMIT_ADDRESS,
               entry_point_selector: "0x00fcd0b0b7e39516dcbf65e688512d37b784f66a37624adad7349669bd7db496",
-              calldata: [],
+              calldata: ["0x" + tier.toString(16)],
             },
             "latest",
           ],
@@ -57,6 +57,27 @@ export const useStarknetApi = () => {
       });
 
       const data = await response.json();
+
+      // Contract reverts when summit is empty (no beast holding it)
+      if (data?.error || !data?.result) {
+        return {
+          tier,
+          beast: {
+            id: 0, token_id: 0, prefix: 0, suffix: 0, level: 0, health: 0,
+            current_health: 0, bonus_health: 0, bonus_xp: 0, current_level: 0,
+            power: 0, attack_streak: 0, last_death_timestamp: 0, revival_count: 0,
+            extra_lives: 0, summit_held_seconds: 0, spirit: 0, luck: 0,
+            specials: false, wisdom: false, diplomacy: false,
+            shiny: 0, animated: 0, revival_time: 0, kills_claimed: 0,
+            name: '', type: '', tier: tier, prefix_name: '', suffix_name: '',
+          } as any,
+          block_timestamp: 0,
+          owner: '',
+          poison_count: 0,
+          poison_timestamp: 0,
+        };
+      }
+
       let beast: any = {
         id: parseInt(data?.result[0], 16),
         prefix: parseInt(data?.result[1], 16),
@@ -88,8 +109,25 @@ export const useStarknetApi = () => {
         kills_claimed: 0,
       }
       beast.current_level = getBeastCurrentLevel(beast.level, beast.bonus_xp);
-      
+
+      // Empty summit (no beast holding it)
+      if (beast.token_id === 0) {
+        return {
+          tier,
+          beast: {
+            ...beast,
+            ...getBeastDetails(beast.id, beast.prefix, beast.suffix, beast.current_level),
+            revival_time: 0,
+          },
+          block_timestamp: 0,
+          owner: '',
+          poison_count: 0,
+          poison_timestamp: 0,
+        };
+      }
+
       return {
+        tier,
         beast: {
           ...beast,
           ...getBeastDetails(beast.id, beast.prefix, beast.suffix, beast.current_level),
@@ -101,10 +139,24 @@ export const useStarknetApi = () => {
         poison_timestamp: parseInt(data?.result[30], 16),
       }
     } catch (error) {
-      console.log('error', error)
+      console.log('error fetching summit data for tier', tier, error)
+      return {
+        tier,
+        beast: {
+          id: 0, token_id: 0, prefix: 0, suffix: 0, level: 0, health: 0,
+          current_health: 0, bonus_health: 0, bonus_xp: 0, current_level: 0,
+          power: 0, attack_streak: 0, last_death_timestamp: 0, revival_count: 0,
+          extra_lives: 0, summit_held_seconds: 0, spirit: 0, luck: 0,
+          specials: false, wisdom: false, diplomacy: false,
+          shiny: 0, animated: 0, revival_time: 0, kills_claimed: 0,
+          name: '', type: '', tier: tier, prefix_name: '', suffix_name: '',
+        } as any,
+        block_timestamp: 0,
+        owner: '',
+        poison_count: 0,
+        poison_timestamp: 0,
+      };
     }
-
-    return null;
   }
 
   const getCurrentBlock = async (): Promise<number> => {

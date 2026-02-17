@@ -134,7 +134,8 @@ const AttackingBeastCard = React.memo(function AttackingBeastCard({
 });
 
 function AttackingBeasts() {
-  const { selectedBeasts, setAttackInProgress, setSelectedBeasts, battleEvents, setSummit, summit } = useGameStore();
+  const { selectedBeasts, setAttackInProgress, setSelectedBeasts, battleEvents, setSummit, summits, activeTier } = useGameStore();
+  const summit = summits[activeTier];
   const { setPauseUpdates } = useGameDirector();
   const [isAttacking, setIsAttacking] = useState(false);
   const [deadBeasts, setDeadBeasts] = useState<Set<string>>(new Set());

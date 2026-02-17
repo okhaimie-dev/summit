@@ -6,7 +6,7 @@ import { EventData, SummitData, useWebSocket } from "@/hooks/useWebSocket";
 import { useAutopilotStore } from "@/stores/autopilotStore";
 import { useGameStore } from "@/stores/gameStore";
 import { BattleEvent, Beast, GameAction, SpectatorBattleEvent, Summit } from "@/types/game";
-import { BEAST_NAMES, ITEM_NAME_PREFIXES, ITEM_NAME_SUFFIXES } from "@/utils/BeastData";
+import { BEAST_NAMES, BEAST_TIERS, ITEM_NAME_PREFIXES, ITEM_NAME_SUFFIXES } from "@/utils/BeastData";
 import { fetchBeastImage } from "@/utils/beasts";
 import { lookupAddressName } from "@/utils/addressNameCache";
 import {
@@ -37,10 +37,12 @@ export interface GameDirectorContext {
 }
 
 export const REWARD_NAME = "Test Money";
-export const START_TIMESTAMP = 1769683726;
-export const SUMMIT_DURATION_SECONDS = 4320000;
-export const SUMMIT_REWARDS_PER_SECOND = 0.0075;
+export const START_TIMESTAMP = 1771363072;
+export const SUMMIT_DURATION_SECONDS = 2592000;
+export const SUMMIT_XP_PER_SECOND = 0.0075;
+export const SUMMIT_REWARDS_PER_SECOND = SUMMIT_XP_PER_SECOND; // backward compat
 export const MAX_BEASTS_PER_ATTACK = 295;
+export const NUM_TIERS = 5;
 
 const GameDirectorContext = createContext<GameDirectorContext>(
   {} as GameDirectorContext
@@ -50,8 +52,10 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
   const { account } = useAccount();
   const { currentNetworkConfig } = useDynamicConnector();
   const {
-    summit,
+    summits,
+    activeTier,
     setSummit,
+    setSummitForTier,
     setAttackInProgress,
     collection,
     setCollection,
@@ -65,6 +69,7 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
     addLiveEvent,
     addGameNotification,
   } = useGameStore();
+  const summit = summits[activeTier];
   const {
     setRevivePotionsUsed,
     setAttackPotionsUsed,
@@ -79,8 +84,6 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
     feed,
     claimCorpses,
     claimSkulls,
-    claimQuestRewards,
-    claimRewards,
     addExtraLife,
     applyStatPoints,
     applyPoison,
@@ -88,23 +91,38 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
   const { tokenBalances, setTokenBalances } = useController();
   const { play } = useSound();
 
-  const [nextSummit, setNextSummit] = useState<Summit | null>(null);
+  const [nextSummits, setNextSummits] = useState<Record<number, Summit | null>>({ 1: null, 2: null, 3: null, 4: null, 5: null });
   const [actionFailed, setActionFailed] = useReducer((x) => x + 1, 0);
   const [pauseUpdates, setPauseUpdates] = useState(false);
 
+  // Shorthand for active tier's next summit
+  const nextSummit = nextSummits[activeTier];
+  const setNextSummit = (s: Summit | null | ((prev: Summit | null) => Summit | null)) => {
+    setNextSummits(prev => {
+      const val = typeof s === 'function' ? s(prev[activeTier]) : s;
+      return { ...prev, [activeTier]: val };
+    });
+  };
+  const setNextSummitForTier = (tier: number, s: Summit | null) => {
+    setNextSummits(prev => ({ ...prev, [tier]: s }));
+  };
+
   const handleSummit = (data: SummitData) => {
     const current_level = getBeastCurrentLevel(data.level, data.bonus_xp);
-    const sameBeast = summit?.beast.token_id === data.token_id;
+    // Derive tier from beast_id using BEAST_TIERS lookup
+    const tier = BEAST_TIERS[data.beast_id as keyof typeof BEAST_TIERS] || 1;
+    const tierSummit = summits[tier];
+    const sameBeast = tierSummit?.beast.token_id === data.token_id;
 
     // If summit beast changed and we owned it, mark it as dead in our collection
-    if (!sameBeast && summit?.beast.token_id) {
-      if (collection.some(b => b.token_id === summit.beast.token_id)) {
+    if (!sameBeast && tierSummit?.beast.token_id) {
+      if (collection.some(b => b.token_id === tierSummit.beast.token_id)) {
         const now = Math.floor(Date.now() / 1000);
-        const secondsHeld = now - summit.block_timestamp;
+        const secondsHeld = now - tierSummit.block_timestamp;
 
         setCollection(prevCollection =>
           prevCollection.map(beast =>
-            beast.token_id === summit.beast.token_id
+            beast.token_id === tierSummit.beast.token_id
               ? { ...beast, last_death_timestamp: now, current_health: 0, summit_held_seconds: beast.summit_held_seconds + (secondsHeld > 5 ? secondsHeld : 0) }
               : beast
           )
@@ -112,7 +130,8 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
       }
     }
 
-    setNextSummit({
+    setNextSummitForTier(tier, {
+      tier,
       beast: {
         ...data,
         ...getBeastDetails(data.beast_id, data.prefix, data.suffix, current_level),
@@ -122,9 +141,9 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
         kills_claimed: 0,
       } as Beast,
       owner: data.owner,
-      block_timestamp: sameBeast ? summit.block_timestamp : Date.now() / 1000,
-      poison_count: sameBeast ? summit.poison_count : 0,
-      poison_timestamp: sameBeast ? summit.poison_timestamp : 0,
+      block_timestamp: sameBeast ? tierSummit.block_timestamp : Date.now() / 1000,
+      poison_count: sameBeast ? tierSummit.poison_count : 0,
+      poison_timestamp: sameBeast ? tierSummit.poison_timestamp : 0,
     });
   };
 
@@ -331,22 +350,7 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
 
     // Handle Rewards events
     if (category === "Rewards") {
-      if (sub_category === "$SURVIVOR Earned") {
-        const rawAmount = typeof eventData.amount === 'number' ? eventData.amount : parseFloat(String(eventData.amount)) || 0;
-        const amount = parseFloat((rawAmount / 100000).toFixed(2));
-        addNotificationWithPlayer({
-          type: 'survivor_earned',
-          value: amount,
-        });
-      } else if (sub_category === "Claimed $SURVIVOR") {
-        const rawAmount = typeof eventData.amount === 'number' ? eventData.amount : parseFloat(String(eventData.amount)) || 0;
-        const amount = parseFloat((rawAmount / 100000).toFixed(2));
-
-        addNotificationWithPlayer({
-          type: 'claimed_survivor',
-          value: amount,
-        });
-      } else if (sub_category === "Claimed Corpses") {
+      if (sub_category === "Claimed Corpses") {
         const corpseAmount = (eventData.corpse_amount as number) || 1;
         const adventurerCount = (eventData.adventurer_count as number) || 1;
         addNotificationWithPlayer({
@@ -386,22 +390,26 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
     setApplyingPotions(false);
   }, [actionFailed]);
 
+  // Process next summits for all tiers
   useEffect(() => {
-    async function processNextSummit() {
-      let newSummit = { ...nextSummit };
+    if (pauseUpdates) return;
+
+    for (let tier = 1; tier <= NUM_TIERS; tier++) {
+      const ns = nextSummits[tier];
+      if (!ns) continue;
+
+      let newSummit = { ...ns, beast: { ...ns.beast } };
       const { currentHealth, extraLives } = applyPoisonDamage(newSummit);
       newSummit.beast.current_health = currentHealth;
       newSummit.beast.extra_lives = extraLives;
 
-      setSelectedBeasts([]);
-      setSummit(newSummit);
-      setNextSummit(null);
+      if (tier === activeTier) {
+        setSelectedBeasts([]);
+      }
+      setSummitForTier(tier, newSummit);
+      setNextSummitForTier(tier, null);
     }
-
-    if (nextSummit && !pauseUpdates) {
-      processNextSummit();
-    }
-  }, [nextSummit, pauseUpdates]);
+  }, [nextSummits, pauseUpdates]);
 
   // Play roar and fetch diplomacy when summit beast changes
   useEffect(() => {
@@ -436,27 +444,39 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
 
   useEffect(() => {
     if (poisonEvent) {
-      if (poisonEvent.beast_token_id === summit?.beast.token_id) {
-        setSummit(prevSummit => ({
-          ...prevSummit,
-          poison_count: (prevSummit?.poison_count || 0) + poisonEvent.count,
-          poison_timestamp: poisonEvent.block_timestamp,
-        }));
-      } else if (poisonEvent.beast_token_id === nextSummit?.beast.token_id) {
-        setNextSummit(prevSummit => ({
-          ...prevSummit,
-          poison_count: (prevSummit?.poison_count || 0) + poisonEvent.count,
-          poison_timestamp: poisonEvent.block_timestamp,
-        }));
+      // Check all tiers for matching beast
+      for (let tier = 1; tier <= NUM_TIERS; tier++) {
+        const tierSummit = summits[tier];
+        if (tierSummit && poisonEvent.beast_token_id === tierSummit.beast.token_id) {
+          setSummitForTier(tier, {
+            ...tierSummit,
+            poison_count: (tierSummit.poison_count || 0) + poisonEvent.count,
+            poison_timestamp: poisonEvent.block_timestamp,
+          });
+          break;
+        }
+        const ns = nextSummits[tier];
+        if (ns && poisonEvent.beast_token_id === ns.beast.token_id) {
+          setNextSummitForTier(tier, {
+            ...ns,
+            poison_count: (ns.poison_count || 0) + poisonEvent.count,
+            poison_timestamp: poisonEvent.block_timestamp,
+          });
+          break;
+        }
       }
     }
   }, [poisonEvent]);
 
   const fetchSummitData = async () => {
-    const summitBeast = await getSummitData();
-    if (summitBeast) {
-      setNextSummit(summitBeast);
-    }
+    const results = await Promise.all(
+      [1, 2, 3, 4, 5].map(tier => getSummitData(tier))
+    );
+    results.forEach((data, i) => {
+      if (data) {
+        setNextSummitForTier(i + 1, data);
+      }
+    });
   };
 
   const updateLiveStats = (beastLiveStats: any[]) => {
@@ -522,14 +542,6 @@ export const GameDirector = ({ children }: PropsWithChildren) => {
 
     if (action.type === "claim_skull_reward") {
       txs.push(claimSkulls(action.beastIds));
-    }
-
-    if (action.type === "claim_quest_reward") {
-      txs.push(claimQuestRewards(action.beastIds));
-    }
-
-    if (action.type === "claim_summit_reward") {
-      txs.push(claimRewards(action.beastIds));
     }
 
     if (action.type === "add_extra_life") {

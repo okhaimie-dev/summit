@@ -107,7 +107,7 @@ export default function RewardsRemainingBar({
     return (
       <Box sx={compactStyles.container}>
         <Box sx={compactStyles.headerRow}>
-          <Typography sx={compactStyles.title}>SUMMIT REMAINING</Typography>
+          <Typography sx={compactStyles.title}>TIME REMAINING</Typography>
           <Typography sx={compactStyles.percent}>{percentText}</Typography>
         </Box>
         <Box sx={[compactStyles.barContainer, borderPulseFx]}>
@@ -126,7 +126,7 @@ export default function RewardsRemainingBar({
     <Box sx={panelStyles.container}>
       <Box sx={panelStyles.valueRow}>
         <Typography sx={panelStyles.value}>
-          SUMMIT REMAINING
+          TIME REMAINING
         </Typography>
         <Typography sx={panelStyles.subtle}>{percentText}</Typography>
       </Box>
