@@ -11,18 +11,6 @@ pub struct LiveBeastStatsEvent {
 }
 
 #[derive(Drop, starknet::Event)]
-pub struct RewardsEarnedEvent {
-    pub beast_token_id: u32,
-    pub amount: u32,
-}
-
-#[derive(Drop, starknet::Event)]
-pub struct RewardsClaimedEvent {
-    pub player: ContractAddress,
-    pub amount: u32,
-}
-
-#[derive(Drop, starknet::Event)]
 pub struct PoisonEvent {
     pub beast_token_id: u32,
     pub count: u16,
@@ -38,6 +26,7 @@ pub struct CorpseEvent {
 
 #[derive(Copy, Drop, Serde, starknet::Event, starknet::Store)]
 pub struct BattleEvent {
+    pub tier: u8,
     pub attacking_beast_token_id: u32,
     pub attack_index: u16,
     pub defending_beast_token_id: u32,
@@ -55,6 +44,8 @@ pub struct BattleEvent {
 }
 
 #[derive(Drop, starknet::Event)]
-pub struct QuestRewardsClaimedEvent {
-    pub quest_rewards_claimed: Span<felt252>,
+pub struct SummitClaimedEvent {
+    pub tier: u8,
+    pub beast_token_id: u32,
+    pub player: ContractAddress,
 }

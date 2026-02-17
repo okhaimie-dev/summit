@@ -2,8 +2,26 @@ use core::hash::HashStateTrait;
 use core::poseidon::PoseidonTrait;
 use death_mountain_beast::beast::ImplBeast;
 use death_mountain_combat::combat::{CombatSpec, ImplCombat, SpecialPowers};
+use death_mountain_combat::constants::CombatEnums::Tier;
 use summit::logic::beast_utils::get_level_from_xp;
 use summit::utils::{felt_to_u32, u32_to_u8s};
+
+#[inline(always)]
+pub fn tier_to_u8(tier: Tier) -> u8 {
+    match tier {
+        Tier::None => 0,
+        Tier::T1 => 1,
+        Tier::T2 => 2,
+        Tier::T3 => 3,
+        Tier::T4 => 4,
+        Tier::T5 => 5,
+    }
+}
+
+#[inline(always)]
+pub fn get_beast_tier(beast_id: u8) -> u8 {
+    tier_to_u8(ImplBeast::get_tier(beast_id))
+}
 
 /// Build a CombatSpec from beast attributes
 /// @param beast_id The beast's type ID (1-75)

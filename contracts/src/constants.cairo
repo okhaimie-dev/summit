@@ -19,6 +19,7 @@ pub const DIPLOMACY_COST: u16 = 15;
 pub const WISDOM_COST: u16 = 20;
 pub const EIGHT_BITS_MAX: u8 = 255;
 pub const TOKEN_DECIMALS: u256 = 1_000_000_000_000_000_000;
+pub const NUM_TIERS: u8 = 5;
 
 pub mod errors {
     pub const BEAST_NOT_YET_REVIVED: felt252 = 'beast not yet revived';
@@ -38,4 +39,7 @@ pub mod errors {
 
     pub const NOT_ENOUGH_CONSUMABLES: felt252 = 'not enough consumables';
     pub const POTION_NOT_ALLOWED_ON_SUMMIT: felt252 = 'Potion not allowed on summit';
+    pub const TIER_MISMATCH: felt252 = 'All beasts must be same tier';
+    pub const INVALID_TIER: felt252 = 'Invalid tier';
+    pub const SUMMIT_EMPTY: felt252 = 'Summit has no holder';
 }
