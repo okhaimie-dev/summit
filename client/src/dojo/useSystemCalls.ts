@@ -128,13 +128,14 @@ export const useSystemCalls = () => {
       return translatedEvents;
     } catch (error: any) {
       console.error("Error executing action:", error);
+      console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       if (!autopilotEnabled) {
         // Try multiple error message sources
-        const errorMessage = parseExecutionError(
-          error?.data?.execution_error
+        const rawError = error?.data?.execution_error
           || error?.message
-          || (typeof error === 'string' ? error : null)
-        );
+          || (typeof error === 'string' ? error : null);
+        console.error("Raw error for parsing:", rawError);
+        const errorMessage = parseExecutionError(rawError);
         enqueueSnackbar(errorMessage, { variant: "error" });
       }
       forceResetAction();
@@ -217,17 +218,19 @@ export const useSystemCalls = () => {
     }
 
     const beastsData = beasts.map(beast => [beast[0].token_id, beast[1], beast[2]]);
+    const calldata = [
+      safeAttack ? summit.beast.token_id : 0,
+      beastsData.length,
+      ...beastsData.flat(),
+      revivalPotions,
+      extraLifePotions,
+      (vrf || !safeAttack) ? 1 : 0,
+    ];
+    console.log("Attack calldata:", { contractAddress: SUMMIT_ADDRESS, entrypoint: "attack", calldata, safeAttack, vrf, summit: summit?.beast });
     txs.push({
       contractAddress: SUMMIT_ADDRESS,
       entrypoint: "attack",
-      calldata: [
-        safeAttack ? summit.beast.token_id : 0,
-        beastsData.length,
-        ...beastsData.flat(),
-        revivalPotions,
-        extraLifePotions,
-        (vrf || !safeAttack) ? 1 : 0,
-      ],
+      calldata,
     });
 
     return txs;
