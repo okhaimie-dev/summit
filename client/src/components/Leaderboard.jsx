@@ -33,8 +33,9 @@ function Leaderboard() {
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      setLoadingLeaderboard(true)
       try {
-        const data = await getLeaderboard()
+        const data = await getLeaderboard(activeTier)
         setLeaderboard(data)
 
         // Fetch names only for top 5 and summit owner (with caching)
@@ -78,7 +79,7 @@ function Leaderboard() {
     }
 
     fetchLeaderboard()
-  }, [summit?.beast?.token_id, summit?.owner, summit?.diplomacy?.beasts?.length])
+  }, [activeTier, summit?.beast?.token_id, summit?.owner, summit?.diplomacy?.beasts?.length])
 
   // Calculate summit owner's live score and rank
   useEffect(() => {
@@ -144,7 +145,7 @@ function Leaderboard() {
 
         <Box sx={styles.sectionHeader}>
           <Typography sx={styles.sectionTitle}>
-            THE BIG FIVE
+            THE BIG FIVE — T{activeTier}
           </Typography>
         </Box>
 

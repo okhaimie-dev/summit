@@ -628,8 +628,22 @@ app.get("/diplomacy/all", async (c) => {
 
 /**
  * GET /leaderboard - Get summit held leaderboard grouped by owner
+ * Query params:
+ *   tier (optional): 1-5 to filter by beast tier
  */
 app.get("/leaderboard", async (c) => {
+  const tierParam = c.req.query("tier");
+  const tier = tierParam ? parseInt(tierParam, 10) : null;
+
+  const conditions = [sql`${beast_stats.summit_held_seconds} > 0`];
+
+  if (tier && tier >= 1 && tier <= 5) {
+    // Tier is derived from beast_id: ((beast_id - 1) % 25) / 5 + 1
+    conditions.push(
+      sql`((${beasts.beast_id} - 1) % 25) / 5 + 1 = ${tier}`
+    );
+  }
+
   const results = await db
     .select({
       owner: beast_owners.owner,
@@ -637,7 +651,8 @@ app.get("/leaderboard", async (c) => {
     })
     .from(beast_stats)
     .innerJoin(beast_owners, eq(beast_owners.token_id, beast_stats.token_id))
-    .where(sql`${beast_stats.summit_held_seconds} > 0`)
+    .innerJoin(beasts, eq(beasts.token_id, beast_stats.token_id))
+    .where(and(...conditions))
     .groupBy(beast_owners.owner)
     .orderBy(sql`sum(${beast_stats.summit_held_seconds}) desc`);
 

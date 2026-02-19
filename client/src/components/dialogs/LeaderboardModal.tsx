@@ -14,15 +14,20 @@ interface LeaderboardModalProps {
 
 const PAGE_SIZE = 25;
 
+const TIER_LABELS = ['All', 'T1', 'T2', 'T3', 'T4', 'T5'];
+
 export default function LeaderboardModal({ open, onClose }: LeaderboardModalProps) {
-  const { leaderboard, setLeaderboard } = useGameStore();
+  const { activeTier } = useGameStore();
   const { getTopBeasts, getLeaderboard } = useSummitApi();
 
   const [activeTab, setActiveTab] = useState<'players' | 'beasts'>('players');
 
   // Players tab state
+  const [selectedTier, setSelectedTier] = useState<number>(activeTier);
   const [playersPage, setPlayersPage] = useState(1);
   const [addressNames, setAddressNames] = useState<Record<string, string | null>>({});
+  const [tierLeaderboard, setTierLeaderboard] = useState<{ owner: string; summit_held_seconds: number }[]>([]);
+  const [playersLoading, setPlayersLoading] = useState(false);
 
   // Beasts tab state
   const [beastsPage, setBeastsPage] = useState(1);
@@ -31,22 +36,35 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
   const [beastsTotal, setBeastsTotal] = useState(0);
   const [beastOwnerNames, setBeastOwnerNames] = useState<Record<string, string | null>>({});
 
-  // Fetch leaderboard data if not already loaded (e.g. on mobile where Leaderboard component doesn't render)
+  // Sync selected tier with active tier when modal opens
   useEffect(() => {
-    if (open && leaderboard.length === 0) {
-      getLeaderboard()
-        .then((data) => setLeaderboard(data))
-        .catch((error) => console.error('Error fetching leaderboard:', error));
+    if (open) {
+      setSelectedTier(activeTier);
     }
-  }, [open]);
+  }, [open, activeTier]);
 
-  const playersTotalPages = Math.max(1, Math.ceil(leaderboard.length / PAGE_SIZE));
+  // Fetch leaderboard data for selected tier
+  useEffect(() => {
+    if (!open || activeTab !== 'players') return;
+
+    setPlayersLoading(true);
+    const tier = selectedTier === 0 ? undefined : selectedTier;
+    getLeaderboard(tier)
+      .then((data) => {
+        setTierLeaderboard(data);
+        setPlayersPage(1);
+      })
+      .catch((error) => console.error('Error fetching leaderboard:', error))
+      .finally(() => setPlayersLoading(false));
+  }, [open, activeTab, selectedTier]);
+
+  const playersTotalPages = Math.max(1, Math.ceil(tierLeaderboard.length / PAGE_SIZE));
   const beastsTotalPages = Math.max(1, Math.ceil(beastsTotal / PAGE_SIZE));
 
   const playerPagedItems = useMemo(() => {
     const start = (playersPage - 1) * PAGE_SIZE;
-    return leaderboard.slice(start, start + PAGE_SIZE);
-  }, [leaderboard, playersPage]);
+    return tierLeaderboard.slice(start, start + PAGE_SIZE);
+  }, [tierLeaderboard, playersPage]);
 
   // Fetch player names for current page
   useEffect(() => {
@@ -187,6 +205,18 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
 
         {activeTab === 'players' && (
           <>
+            <Box sx={styles.tierSelector}>
+              {TIER_LABELS.map((label, i) => (
+                <Box
+                  key={i}
+                  sx={[styles.tierButton, selectedTier === i && styles.tierButtonActive]}
+                  onClick={() => setSelectedTier(i)}
+                >
+                  <Typography sx={styles.tierButtonText}>{label}</Typography>
+                </Box>
+              ))}
+            </Box>
+
             <Box sx={styles.tableContainer}>
               <Box sx={styles.tableHeader}>
                 <Typography sx={[styles.headerCell, { flex: '0 0 60px', textAlign: 'left' }]}>#</Typography>
@@ -195,7 +225,11 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
               </Box>
 
               <Box sx={styles.tableBody}>
-                {leaderboard.length === 0 ? (
+                {playersLoading ? (
+                  <Box sx={styles.emptyState}>
+                    <Typography sx={styles.emptyText}>Loading leaderboard...</Typography>
+                  </Box>
+                ) : tierLeaderboard.length === 0 ? (
                   <Box sx={styles.emptyState}>
                     <Typography sx={styles.emptyText}>
                       No player leaderboard data yet. Play a bit and check back soon.
@@ -234,11 +268,11 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
               </Box>
             </Box>
 
-            {leaderboard.length > 0 && (
+            {tierLeaderboard.length > 0 && (
               <Box sx={styles.footer}>
                 <Typography sx={styles.paginationInfo}>
-                  Showing {Math.min((playersPage - 1) * PAGE_SIZE + 1, leaderboard.length)}-
-                  {Math.min(playersPage * PAGE_SIZE, leaderboard.length)} of {leaderboard.length}
+                  Showing {Math.min((playersPage - 1) * PAGE_SIZE + 1, tierLeaderboard.length)}-
+                  {Math.min(playersPage * PAGE_SIZE, tierLeaderboard.length)} of {tierLeaderboard.length}
                 </Typography>
                 <Pagination
                   count={playersTotalPages}
@@ -396,6 +430,38 @@ const styles = {
     '&.Mui-selected': {
       color: gameColors.yellow,
     },
+  },
+  tierSelector: {
+    display: 'flex',
+    gap: '6px',
+    justifyContent: 'center',
+    mb: 1.5,
+  },
+  tierButton: {
+    padding: '4px 14px',
+    borderRadius: '16px',
+    cursor: 'pointer',
+    border: `1px solid ${gameColors.accentGreen}40`,
+    background: `${gameColors.darkGreen}40`,
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      background: `${gameColors.darkGreen}80`,
+      borderColor: `${gameColors.accentGreen}80`,
+    },
+  },
+  tierButtonActive: {
+    background: `${gameColors.yellow}20`,
+    borderColor: gameColors.yellow,
+    '&:hover': {
+      background: `${gameColors.yellow}30`,
+      borderColor: gameColors.yellow,
+    },
+  },
+  tierButtonText: {
+    fontSize: '12px',
+    fontWeight: 'bold',
+    color: '#ffedbb',
+    letterSpacing: '0.5px',
   },
   tableContainer: {
     borderRadius: '10px',
