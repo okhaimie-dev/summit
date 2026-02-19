@@ -51,6 +51,7 @@ export const EVENT_SELECTORS = {
   SkullEvent: getPaddedSelector("SkullEvent"),
   BattleEvent: getPaddedSelector("BattleEvent"),
   QuestRewardsClaimedEvent: getPaddedSelector("QuestRewardsClaimedEvent"),
+  SummitClaimedEvent: getPaddedSelector("SummitClaimedEvent"),
 } as const;
 
 /**
@@ -160,6 +161,7 @@ const TWO_POW_17 = 0x20000n;
 const TWO_POW_23 = 0x800000n;
 const TWO_POW_32 = 0x100000000n;
 const TWO_POW_64 = 0x10000000000000000n;
+const TWO_POW_128 = 0x100000000000000000000000000000000n;
 
 const MASK_1 = 0x1n;
 const MASK_4 = 0xFn;
@@ -262,99 +264,95 @@ export interface QuestRewardsClaimedEventData {
 
 /**
  * Unpack LiveBeastStats from a single felt252
- * Bit layout (total 251 bits):
- * - token_id: 17 bits
- * - current_health: 12 bits
- * - bonus_health: 11 bits
- * - bonus_xp: 15 bits
- * - attack_streak: 4 bits
- * - last_death_timestamp: 64 bits
- * - revival_count: 6 bits
- * - extra_lives: 12 bits
- * - summit_held_seconds: 23 bits
- * - spirit: 8 bits
- * - luck: 8 bits
- * - specials: 1 bit
- * - wisdom: 1 bit
- * - diplomacy: 1 bit
- * - rewards_earned: 32 bits
- * - rewards_claimed: 32 bits
- * - captured_summit: 1 bit
- * - used_revival_potion: 1 bit
- * - used_attack_potion: 1 bit
- * - max_attack_streak: 1 bit
+ *
+ * The contract packs as u256 { low, high }:
+ *
+ * Low u128 (bits 0-127):
+ *   - last_death_timestamp: 64 bits
+ *   - rewards_earned: 32 bits
+ *   - rewards_claimed: 32 bits
+ *
+ * High u128 (bits 128-250):
+ *   - token_id: 17 bits
+ *   - current_health: 12 bits
+ *   - bonus_health: 11 bits
+ *   - bonus_xp: 15 bits
+ *   - attack_streak: 4 bits
+ *   - revival_count: 6 bits
+ *   - extra_lives: 12 bits
+ *   - summit_held_seconds: 23 bits
+ *   - spirit: 8 bits
+ *   - luck: 8 bits
+ *   - specials: 1 bit
+ *   - wisdom: 1 bit
+ *   - diplomacy: 1 bit
+ *   - captured_summit: 1 bit
+ *   - used_revival_potion: 1 bit
+ *   - used_attack_potion: 1 bit
+ *   - max_attack_streak: 1 bit
  */
 export function unpackLiveBeastStats(packedFelt: string): LiveBeastStats {
-  let packed = hexToBigInt(packedFelt);
+  const packed = hexToBigInt(packedFelt);
 
-  // Extract token_id (17 bits)
-  const token_id = Number(packed & MASK_17);
-  packed = packed / TWO_POW_17;
+  // Split into low and high u128 halves (matches Cairo u256 { low, high })
+  const MASK_128 = (1n << 128n) - 1n;
+  let low = packed & MASK_128;
+  let high = packed >> 128n;
 
-  // Extract current_health (12 bits)
-  const current_health = Number(packed & MASK_12);
-  packed = packed / TWO_POW_12;
+  // ---- Decode low u128: last_death_timestamp(64) + rewards_earned(32) + rewards_claimed(32) ----
+  const last_death_timestamp = low & MASK_64;
+  low = low / TWO_POW_64;
+  const rewards_earned = Number(low & MASK_32);
+  low = low / TWO_POW_32;
+  const rewards_claimed = Number(low & MASK_32);
 
-  // Extract bonus_health (11 bits)
-  const bonus_health = Number(packed & MASK_11);
-  packed = packed / TWO_POW_11;
+  // ---- Decode high u128: 17 fields ----
+  const token_id = Number(high & MASK_17);
+  high = high / TWO_POW_17;
 
-  // Extract bonus_xp (15 bits)
-  const bonus_xp = Number(packed & MASK_15);
-  packed = packed / TWO_POW_15;
+  const current_health = Number(high & MASK_12);
+  high = high / TWO_POW_12;
 
-  // Extract attack_streak (4 bits)
-  const attack_streak = Number(packed & MASK_4);
-  packed = packed / TWO_POW_4;
+  const bonus_health = Number(high & MASK_11);
+  high = high / TWO_POW_11;
 
-  // Extract last_death_timestamp (64 bits)
-  const last_death_timestamp = packed & MASK_64;
-  packed = packed / TWO_POW_64;
+  const bonus_xp = Number(high & MASK_15);
+  high = high / TWO_POW_15;
 
-  // Extract revival_count (6 bits)
-  const revival_count = Number(packed & MASK_6);
-  packed = packed / TWO_POW_6;
+  const attack_streak = Number(high & MASK_4);
+  high = high / TWO_POW_4;
 
-  // Extract extra_lives (12 bits)
-  const extra_lives = Number(packed & MASK_12);
-  packed = packed / TWO_POW_12;
+  const revival_count = Number(high & MASK_6);
+  high = high / TWO_POW_6;
 
-  // Extract summit_held_seconds (23 bits)
-  const summit_held_seconds = Number(packed & MASK_23);
-  packed = packed / TWO_POW_23;
+  const extra_lives = Number(high & MASK_12);
+  high = high / TWO_POW_12;
 
-  // Extract spirit (8 bits)
-  const spirit = Number(packed & MASK_8);
-  packed = packed / TWO_POW_8;
+  const summit_held_seconds = Number(high & MASK_23);
+  high = high / TWO_POW_23;
 
-  // Extract luck (8 bits)
-  const luck = Number(packed & MASK_8);
-  packed = packed / TWO_POW_8;
+  const spirit = Number(high & MASK_8);
+  high = high / TWO_POW_8;
 
-  // Extract stats flags (3 bits: specials, wisdom, diplomacy)
-  const specials = Number(packed & MASK_1);
-  packed = packed / 2n;
-  const wisdom = Number(packed & MASK_1);
-  packed = packed / 2n;
-  const diplomacy = Number(packed & MASK_1);
-  packed = packed / 2n;
+  const luck = Number(high & MASK_8);
+  high = high / TWO_POW_8;
 
-  // Extract rewards_earned (32 bits)
-  const rewards_earned = Number(packed & MASK_32);
-  packed = packed / TWO_POW_32;
+  // Stats flags (3 bits: specials, wisdom, diplomacy)
+  const specials = Number(high & MASK_1);
+  high = high / 2n;
+  const wisdom = Number(high & MASK_1);
+  high = high / 2n;
+  const diplomacy = Number(high & MASK_1);
+  high = high / 2n;
 
-  // Extract rewards_claimed (32 bits)
-  const rewards_claimed = Number(packed & MASK_32);
-  packed = packed / TWO_POW_32;
-
-  // Extract quest flags (4 bits: captured_summit, used_revival_potion, used_attack_potion, max_attack_streak)
-  const captured_summit = Number(packed & MASK_1);
-  packed = packed / 2n;
-  const used_revival_potion = Number(packed & MASK_1);
-  packed = packed / 2n;
-  const used_attack_potion = Number(packed & MASK_1);
-  packed = packed / 2n;
-  const max_attack_streak = Number(packed & MASK_1);
+  // Quest flags (4 bits: captured_summit, used_revival_potion, used_attack_potion, max_attack_streak)
+  const captured_summit = Number(high & MASK_1);
+  high = high / 2n;
+  const used_revival_potion = Number(high & MASK_1);
+  high = high / 2n;
+  const used_attack_potion = Number(high & MASK_1);
+  high = high / 2n;
+  const max_attack_streak = Number(high & MASK_1);
 
   return {
     token_id,
@@ -425,6 +423,18 @@ export function decodeBattleEvent(keys: string[], data: string[]): BattleEventDa
     attack_potions: hexToNumber(data[12]),
     revive_potions: hexToNumber(data[13]),
     xp_gained: hexToNumber(data[14]),
+  };
+}
+
+/**
+ * Decode SummitClaimedEvent
+ * Data: tier (u8), beast_token_id (u32), player (ContractAddress)
+ */
+export function decodeSummitClaimedEvent(keys: string[], data: string[]): { tier: number; beast_token_id: number; player: string } {
+  return {
+    tier: hexToNumber(data[0]),
+    beast_token_id: hexToNumber(data[1]),
+    player: feltToHex(data[2]),
   };
 }
 

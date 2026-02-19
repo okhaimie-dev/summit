@@ -27,7 +27,7 @@ export interface Diplomacy {
 
 export interface Leaderboard {
   owner: string;
-  amount: number;
+  summit_held_seconds: number;
 }
 
 export interface Beast {

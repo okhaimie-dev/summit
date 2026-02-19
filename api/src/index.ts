@@ -627,22 +627,24 @@ app.get("/diplomacy/all", async (c) => {
 });
 
 /**
- * GET /leaderboard - Get rewards leaderboard grouped by owner
+ * GET /leaderboard - Get summit held leaderboard grouped by owner
  */
 app.get("/leaderboard", async (c) => {
   const results = await db
     .select({
-      owner: rewards_earned.owner,
-      amount: sql<number>`sum(${rewards_earned.amount})`,
+      owner: beast_owners.owner,
+      summit_held_seconds: sql<number>`sum(${beast_stats.summit_held_seconds})`,
     })
-    .from(rewards_earned)
-    .groupBy(rewards_earned.owner)
-    .orderBy(sql`sum(${rewards_earned.amount}) desc`);
+    .from(beast_stats)
+    .innerJoin(beast_owners, eq(beast_owners.token_id, beast_stats.token_id))
+    .where(sql`${beast_stats.summit_held_seconds} > 0`)
+    .groupBy(beast_owners.owner)
+    .orderBy(sql`sum(${beast_stats.summit_held_seconds}) desc`);
 
   return c.json(
     results.map((r) => ({
       owner: r.owner,
-      amount: Number(r.amount) / 100000,
+      summit_held_seconds: Number(r.summit_held_seconds),
     }))
   );
 });

@@ -114,8 +114,14 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
     }
   }, [activeTab, beastsPage]);
 
-  const formatRewards = (rewards: number) =>
-    rewards.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const formatTime = (totalSeconds: number) => {
+    const seconds = Math.floor(totalSeconds);
+    if (seconds < 60) return `${seconds}s`;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
 
   const formatAddress = (addr: string) => {
     if (!addr || addr.length <= 10) return addr || '';
@@ -185,7 +191,7 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
               <Box sx={styles.tableHeader}>
                 <Typography sx={[styles.headerCell, { flex: '0 0 60px', textAlign: 'left' }]}>#</Typography>
                 <Typography sx={[styles.headerCell, { flex: '1 1 auto' }]}>PLAYER</Typography>
-                <Typography sx={[styles.headerCell, { flex: '0 0 140px', textAlign: 'right' }]}>REWARDS</Typography>
+                <Typography sx={[styles.headerCell, { flex: '0 0 140px', textAlign: 'right' }]}>TIME HELD</Typography>
               </Box>
 
               <Box sx={styles.tableBody}>
@@ -220,7 +226,7 @@ export default function LeaderboardModal({ open, onClose }: LeaderboardModalProp
                             <Typography sx={styles.playerAddress}>{formatAddress(player.owner)}</Typography>
                           )}
                         </Box>
-                        <Typography sx={styles.rewardsCell}>{formatRewards(player.amount)}</Typography>
+                        <Typography sx={styles.rewardsCell}>{formatTime(player.summit_held_seconds)}</Typography>
                       </Box>
                     );
                   })

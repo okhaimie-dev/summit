@@ -10,7 +10,7 @@ interface DiplomacyPopoverProps {
   onClose: () => void;
   diplomacy: Diplomacy;
   summitBeast: Beast;
-  leaderboard: { owner: string; amount: number }[];
+  leaderboard: { owner: string; summit_held_seconds: number }[];
   addressNames: Record<string, string | null>;
 }
 

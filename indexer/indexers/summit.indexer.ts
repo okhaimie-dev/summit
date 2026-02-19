@@ -44,6 +44,7 @@ import {
   decodeBeastUpdatesEvent,
   decodeLiveBeastStatsEvent,
   decodeBattleEvent,
+  decodeSummitClaimedEvent,
   decodeRewardsEarnedEvent,
   decodeRewardsClaimedEvent,
   decodePoisonEvent,
@@ -1840,6 +1841,27 @@ export default function indexer(runtimeConfig: ApibaraRuntimeConfig) {
                 },
                 player: quest_player,
                 token_id: null,
+                transaction_hash,
+                created_at: block_timestamp,
+                indexed_at,
+              });
+              break;
+            }
+
+            case EVENT_SELECTORS.SummitClaimedEvent: {
+              const decoded = decodeSummitClaimedEvent([...keys], [...data]);
+              collectSummitLog(batches, {
+                block_number,
+                event_index,
+                category: "Battle",
+                sub_category: "Summit Claimed",
+                data: {
+                  tier: decoded.tier,
+                  beast_token_id: decoded.beast_token_id,
+                  player: decoded.player,
+                },
+                player: decoded.player,
+                token_id: decoded.beast_token_id,
                 transaction_hash,
                 created_at: block_timestamp,
                 indexed_at,

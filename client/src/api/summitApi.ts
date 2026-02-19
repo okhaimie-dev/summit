@@ -195,7 +195,7 @@ export const useSummitApi = () => {
   /**
    * Get rewards leaderboard
    */
-  const getLeaderboard = async (): Promise<{ owner: string; amount: number }[]> => {
+  const getLeaderboard = async (): Promise<{ owner: string; summit_held_seconds: number }[]> => {
     const response = await fetch(`${currentNetworkConfig.apiUrl}/leaderboard`);
     if (!response.ok) {
       throw new Error(`Failed to fetch leaderboard: ${response.status}`);

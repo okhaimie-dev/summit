@@ -1,5 +1,4 @@
 import { useSummitApi } from '@/api/summitApi';
-import { START_TIMESTAMP, SUMMIT_DURATION_SECONDS, SUMMIT_REWARDS_PER_SECOND } from '@/contexts/GameDirector';
 import { useStatistics } from '@/contexts/Statistics';
 import { useGameStore } from '@/stores/gameStore';
 import { lookupAddressNames } from '@/utils/addressNameCache';
@@ -88,38 +87,32 @@ function Leaderboard() {
       return
     }
 
-    // Calculate rewards from seconds held
+    // Calculate live seconds held since last summit capture
     const secondsHeld = Math.max(0, currentTimestamp - summit.block_timestamp)
-    const diplomacyCount = (summit?.diplomacy?.beasts.length || 0) - (summit?.beast?.diplomacy ? 1 : 0);
-    const diplomacyRewardPerSecond = SUMMIT_REWARDS_PER_SECOND / 100;
-    const diplomacyRewards = diplomacyRewardPerSecond * secondsHeld * diplomacyCount;
 
     // Find summit owner in leaderboard
     const player = leaderboard.find(player => addAddressPadding(player.owner) === addAddressPadding(summit.owner))
-    const gainedSince = (secondsHeld * SUMMIT_REWARDS_PER_SECOND) - diplomacyRewards;
-    const score = (player?.amount || 0) + gainedSince;
+    const totalSeconds = (player?.summit_held_seconds || 0) + secondsHeld;
 
     // Find summit owner's rank in the sorted list
-    const liveRank = leaderboard.findIndex(p => p.amount < score) + 1
+    const liveRank = leaderboard.findIndex(p => p.summit_held_seconds < totalSeconds) + 1
 
     setSummitOwnerRank({
       rank: liveRank || leaderboard.length + 1,
-      score: score,
-      beforeAmount: player?.amount || 0,
-      gainedSince: gainedSince,
-      diplomacyCount: diplomacyCount,
+      score: totalSeconds,
+      beforeAmount: player?.summit_held_seconds || 0,
+      gainedSince: secondsHeld,
+      diplomacyCount: (summit?.diplomacy?.beasts.length || 0) - (summit?.beast?.diplomacy ? 1 : 0),
     })
   }, [summit?.owner, summit?.beast?.token_id, summit?.block_timestamp, summit?.diplomacy, currentTimestamp, leaderboard])
 
-  const formatRewards = (rewards) => {
-    const n = Number(rewards ?? 0);
-    const fractional = Math.abs(n % 1);
-    const hasNonZeroDecimal = fractional > 1e-9;
-
-    return n.toLocaleString(undefined, {
-      minimumFractionDigits: hasNonZeroDecimal ? 1 : 0,
-      maximumFractionDigits: 1,
-    });
+  const formatTime = (totalSeconds) => {
+    const seconds = Math.floor(Number(totalSeconds ?? 0));
+    if (seconds < 60) return `${seconds}s`;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   }
 
   const PlayerRow = ({ player, index, cartridgeName }) => {
@@ -132,7 +125,7 @@ function Leaderboard() {
           {displayName}
         </Typography>
         <Typography sx={styles.bigFiveRewards}>
-          {formatRewards(player.amount)}
+          {formatTime(player.summit_held_seconds)}
         </Typography>
       </Box>
     )
@@ -183,7 +176,7 @@ function Leaderboard() {
                     {addressNames[summit.owner] || 'Warlock'}
                   </Typography>
                   <Typography sx={styles.summitOwnerScore}>
-                    {formatRewards(summitOwnerRank.beforeAmount)} <span style={{ color: gameColors.brightGreen }}>+{formatRewards(summitOwnerRank.gainedSince)}</span>
+                    {formatTime(summitOwnerRank.beforeAmount)} <span style={{ color: gameColors.brightGreen }}>+{formatTime(summitOwnerRank.gainedSince)}</span>
                   </Typography>
                 </Box>
                 {summitOwnerRank.diplomacyCount > 0 && summit.diplomacy && (
